@@ -1,0 +1,75 @@
+---
+title: "a3_task4_anna_talken"
+author: "Anna Talken"
+date: "11/2/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, messages = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+```
+
+## Read in the Data
+
+```{r, messages = FALSE, warning = FALSE}
+urchins <- read_csv(here("data", "urchins.csv")) %>% 
+  clean_names() %>% # clean names
+  filter(common_name == "Purple Urchin", site == "NAPL") %>% 
+  mutate(date = mdy(date)) %>% # Converted date to class "date"
+  mutate(year_new = year(date)) %>% # Created new column with just the year 
+  mutate(month_new = month(date)) %>% # Created new column with just the month
+  filter(month_new == 1, year_new == 2010) # Filter to only include observations from January in 2010
+```
+
+## Exploratory Histogram
+
+```{r, messages = FALSE, warning = FALSE}
+ggplot(data=urchins, aes(x=size)) +
+  geom_histogram(bins=10) + 
+  facet_wrap(~treatment) +
+  labs(x = "Size (cm)", y = "Number")
+# Creating a histogram to visually compare the size difference between the two treatments (annual vs. control)
+```
+
+```{r, messages = FALSE, warning = FALSE}
+ggplot(data=urchins, aes(sample=size)) +
+  geom_qq() + # Creating a qqplot
+  facet_wrap(~treatment) 
+```
+Based on the histogram, it appears that the two treatment groups don't have a perfectly normal distribution, but are somewhat bell-shaped. The fairly linear trend in the qq plots for both treatments helps to verify that these samples are close to having a normal distribution.  
+
+## Creating a summary table
+
+```{r, messages = FALSE, warning = FALSE}
+purple_urchin_stats <- urchins %>% 
+  group_by(treatment) %>% 
+  summarize(mean_size = mean(size),
+            median_size = median(size),
+            sd_size = sd(size),
+            n = n())
+
+purple_urchin_stats
+```
+### Split into groups and then pull sample vector 
+
+```{r, messages = FALSE, warning = FALSE}
+annual_sample <- urchins %>% 
+  filter(treatment == "ANNUAL") %>% 
+  pull(size)
+
+control_sample <- urchins %>% 
+  filter(treatment == "CONTROL") %>% 
+  pull(size)
+```
+
+## Run a two sample t-test
+
+```{r, messages = FALSE, warning = FALSE}
+t.test(control_sample, annual_sample)
+```
+
+After running a two sample t-test, we can see that there is a small difference between the means in each treatment group. The mean of the annual treatment group (mean = 3.916) is only about 5% greater than the mean of the control treatment group (3.725). A p-value of 0.2536 means that there is a 25.36% chance that you could randomly select two samples from populations with the same mean that are this similar by chance.
